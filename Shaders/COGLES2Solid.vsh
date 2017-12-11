@@ -1,0 +1,303 @@
+#define MAX_LIGHTS 8
+
+/* Attributes */
+
+attribute vec3 inVertexPosition;
+attribute vec3 inVertexNormal;
+attribute vec4 inVertexColor;
+attribute vec2 inTexCoord0;
+
+/* Uniforms */
+
+uniform mat4 uWVPMatrix;
+uniform mat4 uWVMatrix;
+uniform mat4 uNMatrix;
+uniform mat4 uTMatrix0;
+
+uniform vec4 uGlobalAmbient;
+uniform vec4 uMaterialAmbient;
+uniform vec4 uMaterialDiffuse;
+uniform vec4 uMaterialEmissive;
+uniform vec4 uMaterialSpecular;
+uniform float uMaterialShininess;
+
+uniform int uLightCount;
+uniform int uLightType[MAX_LIGHTS];
+uniform vec3 uLightPosition[MAX_LIGHTS];
+uniform vec3 uLightDirection[MAX_LIGHTS];
+uniform vec3 uLightAttenuation[MAX_LIGHTS];
+uniform vec4 uLightAmbient[MAX_LIGHTS];
+uniform vec4 uLightDiffuse[MAX_LIGHTS];
+uniform vec4 uLightSpecular[MAX_LIGHTS];
+
+uniform float uThickness;
+
+/* Varyings */
+
+varying vec2 vTextureCoord0;
+varying vec4 vVertexColor;
+varying vec4 vSpecularColor;
+varying float vFogCoord;
+
+vec3 getLightDirection(int index)
+{
+	vec3 LightDirection;
+	if (index == 0) LightDirection = uLightDirection[0];
+	else if (index == 1) LightDirection = uLightDirection[1];
+	else if (index == 2) LightDirection = uLightDirection[2];
+	else if (index == 3) LightDirection = uLightDirection[3];
+	else if (index == 4) LightDirection = uLightDirection[4];
+	else if (index == 5) LightDirection = uLightDirection[5];
+	else if (index == 6) LightDirection = uLightDirection[6];
+	else if (index == 7) LightDirection = uLightDirection[7];
+	
+	return LightDirection;
+}
+
+vec4 getLightAmbient(int index)
+{
+	vec4 LightAmbient;
+	if (index == 0) LightAmbient = uLightAmbient[0];
+	else if (index == 1) LightAmbient = uLightAmbient[1];
+	else if (index == 2) LightAmbient = uLightAmbient[2];
+	else if (index == 3) LightAmbient = uLightAmbient[3];
+	else if (index == 4) LightAmbient = uLightAmbient[4];
+	else if (index == 5) LightAmbient = uLightAmbient[5];
+	else if (index == 6) LightAmbient = uLightAmbient[6];
+	else if (index == 7) LightAmbient = uLightAmbient[7];
+	
+	return LightAmbient;
+}
+
+vec4 getLightDiffuse(int index)
+{
+	vec4 LightDiffuse;
+	if (index == 0) LightDiffuse = uLightDiffuse[0];
+	else if (index == 1) LightDiffuse = uLightDiffuse[1];
+	else if (index == 2) LightDiffuse = uLightDiffuse[2];
+	else if (index == 3) LightDiffuse = uLightDiffuse[3];
+	else if (index == 4) LightDiffuse = uLightDiffuse[4];
+	else if (index == 5) LightDiffuse = uLightDiffuse[5];
+	else if (index == 6) LightDiffuse = uLightDiffuse[6];
+	else if (index == 7) LightDiffuse = uLightDiffuse[7];
+	
+	return LightDiffuse;
+}
+
+vec4 getLightSpecular(int index)
+{
+	vec4 LightSpecular;
+	if (index == 0) LightSpecular = uLightSpecular[0];
+	else if (index == 1) LightSpecular = uLightSpecular[1];
+	else if (index == 2) LightSpecular = uLightSpecular[2];
+	else if (index == 3) LightSpecular = uLightSpecular[3];
+	else if (index == 4) LightSpecular = uLightSpecular[4];
+	else if (index == 5) LightSpecular = uLightSpecular[5];
+	else if (index == 6) LightSpecular = uLightSpecular[6];
+	else if (index == 7) LightSpecular = uLightSpecular[7];
+	
+	return LightSpecular;
+}
+
+vec3 getLightAttenuation(int index)
+{
+	vec3 LightAttenuation;
+	if (index == 0) LightAttenuation = uLightAttenuation[0];
+	else if (index == 1) LightAttenuation = uLightAttenuation[1];
+	else if (index == 2) LightAttenuation = uLightAttenuation[2];
+	else if (index == 3) LightAttenuation = uLightAttenuation[3];
+	else if (index == 4) LightAttenuation = uLightAttenuation[4];
+	else if (index == 5) LightAttenuation = uLightAttenuation[5];
+	else if (index == 6) LightAttenuation = uLightAttenuation[6];
+	else if (index == 7) LightAttenuation = uLightAttenuation[7];
+	
+	return LightAttenuation;
+}
+
+bool checkLightType(int i, int lightType)
+{
+
+	if (i == 0 && uLightType[0] == lightType) return true;
+	else if (i == 1 && uLightType[1] == lightType) return true;
+	else if (i == 2 && uLightType[2] == lightType) return true;
+	else if (i == 3 && uLightType[3] == lightType) return true;
+	else if (i == 4 && uLightType[4] == lightType) return true;
+	else if (i == 5 && uLightType[5] == lightType) return true;
+	else if (i == 6 && uLightType[6] == lightType) return true;
+	else if (i == 7 && uLightType[7] == lightType) return true;
+	
+	return false;
+}
+
+void dirLight(in int index, in vec3 position, in vec3 normal, inout vec4 ambient, inout vec4 diffuse, inout vec4 specular)
+{
+	vec3 LightDirection = getLightDirection(index);
+	
+	vec3 L = normalize(-(uNMatrix * vec4(LightDirection, 0.0)).xyz);
+	
+	vec4 LightAmbient = getLightAmbient(index);
+
+	ambient += LightAmbient;
+
+	float NdotL = dot(normal, L);
+
+	if (NdotL > 0.0)
+	{		
+		vec4 LightDiffuse = getLightDiffuse(index);
+		
+		diffuse += LightDiffuse * NdotL;
+
+		vec3 E = normalize(-position); 
+		vec3 HalfVector = normalize(L + E);
+		float NdotH = max(0.0, dot(normal, HalfVector));
+
+		float SpecularFactor = pow(NdotH, uMaterialShininess);
+		
+		vec4 LightSpecular = getLightSpecular(index);
+		
+		specular += LightSpecular * SpecularFactor;
+	}
+}
+
+void dirLight2(in vec3 position, in vec3 normal, inout vec4 ambient, inout vec4 diffuse, inout vec4 specular)
+{
+	//vec3 LightDirection = uLightDirection[0];
+	
+	vec3 L = normalize(-(uNMatrix * vec4(uLightDirection[0], 0.0)).xyz);
+	
+	//vec4 LightAmbient = getLightAmbient(index);
+
+	ambient += uLightAmbient[0];
+
+	float NdotL = dot(normal, L);
+
+	if (NdotL > 0.0)
+	{		
+		//vec4 LightDiffuse = uLightDiffuse[0];
+		
+		diffuse += uLightDiffuse[0] * NdotL;
+
+		vec3 E = normalize(-position); 
+		vec3 HalfVector = normalize(L + E);
+		float NdotH = max(0.0, dot(normal, HalfVector));
+
+		float SpecularFactor = pow(NdotH, uMaterialShininess);
+		
+		//vec4 LightSpecular = uLightSpecular[0];
+		
+		specular += uLightSpecular[0] * SpecularFactor;
+	}
+}
+
+void pointLight(in int index, in vec3 position, in vec3 normal, inout vec4 ambient, inout vec4 diffuse, inout vec4 specular)
+{
+	vec3 L = uLightPosition[index] - position;
+	float D = length(L);
+	L = normalize(L);
+	
+	vec3 LightAttenuation = getLightAttenuation(index);
+
+	float Attenuation = 1.0 / (LightAttenuation.x + LightAttenuation.y * D +
+		LightAttenuation.z * D * D);
+		
+	vec4 LightAmbient = getLightAmbient(index);
+
+	ambient += LightAmbient * Attenuation;
+
+	float NdotL = dot(normal, L);
+
+	if (NdotL > 0.0)
+	{
+		vec4 LightDiffuse = getLightDiffuse(index);
+	
+		diffuse += LightDiffuse * NdotL * Attenuation;
+
+		vec3 E = normalize(-position); 
+		vec3 HalfVector = normalize(L + E);
+		float NdotH = max(0.0, dot(normal, HalfVector));
+
+		float SpecularFactor = pow(NdotH, uMaterialShininess);
+		
+		vec4 LightSpecular = getLightSpecular(index);
+		
+		specular += LightSpecular * SpecularFactor * Attenuation;
+	}
+}
+
+void spotLight(in int index, in vec3 position, in vec3 normal, inout vec4 ambient, inout vec4 diffuse, inout vec4 specular)
+{
+	// TO-DO
+}
+
+void main()
+{
+	gl_Position = uWVPMatrix * vec4(inVertexPosition, 1.0);
+	gl_PointSize = uThickness;
+
+	vec4 TextureCoord0 = vec4(inTexCoord0.x, inTexCoord0.y, 1.0, 1.0);
+	vTextureCoord0 = vec4(uTMatrix0 * TextureCoord0).xy;
+
+	vVertexColor = inVertexColor.bgra;
+	vSpecularColor = vec4(0.0, 0.0, 0.0, 0.0);
+
+	vec3 Position = (uWVMatrix * vec4(inVertexPosition, 1.0)).xyz;
+
+	if (uLightCount > 0)
+	{
+		vec3 Normal = normalize((uNMatrix * vec4(inVertexNormal, 0.0)).xyz);
+
+		vec4 Ambient = vec4(0.0, 0.0, 0.0, 0.0);
+		vec4 Diffuse = vec4(0.0, 0.0, 0.0, 0.0);
+
+		/*for (int i = 0; i < MAX_LIGHTS; i++)
+		{
+			if (i > uLightCount)
+				break;
+				
+			if (checkLightType(i, 0))
+				pointLight(i, Position, Normal, Ambient, Diffuse, vSpecularColor);
+		}
+
+		for (int i = 0; i < MAX_LIGHTS; i++)
+		{
+			if (i > uLightCount)
+				break;
+			
+			if (checkLightType(i, 1))
+				spotLight(i, Position, Normal, Ambient, Diffuse, vSpecularColor);
+		}
+
+		for (int i = 0; i < MAX_LIGHTS; i++)
+		{
+			if (i > uLightCount)
+				break;
+			
+			if (checkLightType(i, 2))
+				dirLight(i, Position, Normal, Ambient, Diffuse, vSpecularColor);
+		}*/
+		
+		//only support 1 light source, assume directional
+		/*
+		if (uLightType[0] == 0)
+			pointLight(i, Position, Normal, Ambient, Diffuse, vSpecularColor);
+		else if (uLightType[0] == 1)
+			spotLight(i, Position, Normal, Ambient, Diffuse, vSpecularColor);
+		else */
+		if (uLightType[0] == 2)
+			dirLight2(Position, Normal, Ambient, Diffuse, vSpecularColor);		
+		
+
+		vec4 LightColor = Ambient * uMaterialAmbient + Diffuse * uMaterialDiffuse;
+		LightColor = clamp(LightColor, 0.0, 1.0);
+		LightColor.w = 1.0;
+
+		vVertexColor *= LightColor;
+		vVertexColor += uMaterialEmissive;
+		vVertexColor += uGlobalAmbient * uMaterialAmbient;
+		vVertexColor = clamp(vVertexColor, 0.0, 1.0);
+		
+		vSpecularColor *= uMaterialSpecular;
+	}
+
+	vFogCoord = length(Position);
+}
