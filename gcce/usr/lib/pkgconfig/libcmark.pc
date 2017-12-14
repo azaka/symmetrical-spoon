@@ -1,0 +1,10 @@
+prefix=/root/gcce/usr
+exec_prefix=/root/gcce/usr
+libdir=/root/gcce/usr/lib
+includedir=/root/gcce/usr/include
+
+Name: libcmark
+Description: CommonMark parsing, rendering, and manipulation
+Version: 0.28.2
+Libs: -L${libdir} -lcmark
+Cflags: -I${includedir}
